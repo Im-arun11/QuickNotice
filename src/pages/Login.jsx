@@ -30,7 +30,7 @@ export default function Login() {
     }
   }, [user, navigate, redirectPath]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -41,21 +41,18 @@ export default function Login() {
 
     setLoading(true);
 
-    // Simulate login server request
-    setTimeout(() => {
-      const res = login(email, password, role);
-      setLoading(false);
+    const res = await login(email, password);
+    setLoading(false);
 
-      if (res.success) {
-        if (redirectPath) {
-          navigate(`/${redirectPath}`);
-        } else {
-          navigate(role === 'employer' ? '/my-notices' : '/notices');
-        }
+    if (res.success) {
+      if (redirectPath) {
+        navigate(`/${redirectPath}`);
       } else {
-        setError(res.message || 'Invalid credentials');
+        navigate(res.user?.role === 'employer' ? '/my-notices' : '/notices');
       }
-    }, 1000);
+    } else {
+      setError(res.message || 'Invalid credentials. Please try again.');
+    }
   };
 
   return (
@@ -147,7 +144,7 @@ export default function Login() {
               loading={loading}
               icon={LogIn}
             >
-              Sign In as {role === 'employer' ? 'Employer' : 'Worker'}
+              Sign In
             </Button>
           </form>
 

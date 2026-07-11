@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Menu, X, User, LogOut, Settings, Briefcase, Bell } from 'lucide-react';
+import { Menu, X, User, LogOut, Settings, Briefcase, Bell, FileText, ClipboardList } from 'lucide-react';
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -9,8 +9,8 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setUserDropdownOpen(false);
     navigate('/');
   };
@@ -107,6 +107,25 @@ export default function Header() {
                       >
                         <User className="h-4 w-4" /> My Profile
                       </Link>
+                      {/* Role-specific links in dropdown */}
+                      {user.role === 'employer' && (
+                        <Link 
+                          to="/my-notices" 
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                        >
+                          <FileText className="h-4 w-4" /> My Notices
+                        </Link>
+                      )}
+                      {user.role === 'worker' && (
+                        <Link 
+                          to="/my-applications" 
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                        >
+                          <ClipboardList className="h-4 w-4" /> My Applications
+                        </Link>
+                      )}
                       <Link 
                         to="/settings" 
                         onClick={() => setUserDropdownOpen(false)}

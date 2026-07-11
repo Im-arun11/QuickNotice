@@ -3,18 +3,14 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { connectDB } from './config/db.js';
 
-// Load route routers
-import authRoutes from './routes/authRoutes.js';
-import noticeRoutes from './routes/noticeRoutes.js';
-import applicationRoutes from './routes/applicationRoutes.js';
-
-// Setup environment variables
+// Load environment variables FIRST (before any config imports)
 dotenv.config();
 
-// Connect to MongoDB Database
-connectDB();
+// Dynamic imports — ensures dotenv has loaded before these modules read process.env
+const { default: authRoutes } = await import('./routes/authRoutes.js');
+const { default: noticeRoutes } = await import('./routes/noticeRoutes.js');
+const { default: applicationRoutes } = await import('./routes/applicationRoutes.js');
 
 const app = express();
 
@@ -40,7 +36,7 @@ app.use('/api/applications', applicationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'QuickNotice API is active and running.' });
+  res.json({ status: 'OK', message: 'QuickNotice API is active and running (Supabase).' });
 });
 
 // Root fallback route
@@ -66,4 +62,6 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(`Supabase URL: ${process.env.SUPABASE_URL ? '✓ configured' : '✗ MISSING'}`);
+  console.log(`Supabase Service Key: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? '✓ configured' : '✗ MISSING'}`);
 });

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '../services/supabaseClient';
 import { authAPI, noticesAPI, applicationsAPI, setAuthToken } from '../services/api';
 
 const AuthContext = createContext();
@@ -47,31 +48,73 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Load user profile on mount if token is saved in localStorage
+  // Initialize auth — listen to Supabase session state
   useEffect(() => {
+    let mounted = true;
+
     const initializeAuth = async () => {
-      const token = localStorage.getItem('qn_token');
-      if (token) {
-        setAuthToken(token);
-        try {
-          const res = await authAPI.getProfile();
-          if (res.success) {
-            setUser(res.user);
-          } else {
-            localStorage.removeItem('qn_token');
+      try {
+        // Get the current session from Supabase (auto-restores from localStorage)
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.access_token && mounted) {
+          setAuthToken(session.access_token);
+          try {
+            const res = await authAPI.getProfile();
+            if (res.success && mounted) {
+              setUser(res.user);
+            }
+          } catch (error) {
+            console.error('Failed to fetch profile on session restore:', error.message);
+            // Session exists but profile fetch failed — clear session
+            await supabase.auth.signOut();
             setAuthToken(null);
           }
-        } catch (error) {
-          console.error('Token validation failed. Session cleared.', error.message);
-          localStorage.removeItem('qn_token');
-          setAuthToken(null);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        if (mounted) {
+          setAuthLoading(false);
         }
       }
-      setAuthLoading(false);
     };
 
     initializeAuth();
-    fetchNotices(); // Initial notices fetch
+
+    // Listen for auth state changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session?.access_token) {
+            setAuthToken(session.access_token);
+            // Fetch profile on sign in or token refresh
+            try {
+              const res = await authAPI.getProfile();
+              if (res.success && mounted) {
+                setUser(res.user);
+              }
+            } catch (error) {
+              console.error('Profile fetch on auth change failed:', error.message);
+            }
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setAuthToken(null);
+          setUser(null);
+          setApplications([]);
+        }
+      }
+    );
+
+    // Initial notices fetch (public)
+    fetchNotices();
+
+    return () => {
+      mounted = false;
+      subscription?.unsubscribe();
+    };
   }, [fetchNotices]);
 
   // Sync applications if user role or login status changes
@@ -83,41 +126,83 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user, fetchMyApplications]);
 
-  // Login handler
-  const login = async (email, password, role) => {
-    try {
-      const res = await authAPI.login({ email, password, role });
-      if (res.success) {
-        localStorage.setItem('qn_token', res.token);
-        setAuthToken(res.token);
-        setUser(res.user);
-        return { success: true, user: res.user };
-      }
-      return { success: false, message: 'Invalid credentials' };
-    } catch (error) {
-      return { success: false, message: error.response?.data?.message || 'Login failed' };
-    }
-  };
-
   // Register handler
   const register = async (userData) => {
     try {
+      // Step 1: Call backend to create user in Supabase Auth + profiles table
       const res = await authAPI.register(userData);
-      if (res.success) {
-        localStorage.setItem('qn_token', res.token);
-        setAuthToken(res.token);
-        setUser(res.user);
-        return { success: true, user: res.user };
+      if (!res.success) {
+        return { success: false, message: res.message || 'Registration failed' };
       }
-      return { success: false, message: 'Registration failed' };
+
+      // Step 2: Sign in with Supabase client to establish a browser session
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: userData.email,
+        password: userData.password
+      });
+
+      if (signInError) {
+        // Registration succeeded but auto-login failed — user can manually log in
+        return { 
+          success: true, 
+          user: res.user, 
+          message: 'Registration successful! Please sign in manually.' 
+        };
+      }
+
+      // Session established — set auth token and user
+      if (signInData.session) {
+        setAuthToken(signInData.session.access_token);
+        setUser(res.user);
+      }
+
+      return { success: true, user: res.user };
     } catch (error) {
-      return { success: false, message: error.response?.data?.message || 'Registration failed' };
+      const message = error.response?.data?.message || 'Registration failed. Please try again.';
+      return { success: false, message };
+    }
+  };
+
+  // Login handler
+  const login = async (email, password) => {
+    try {
+      // Sign in with Supabase client (establishes browser session with auto-refresh)
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (signInError) {
+        // Map Supabase errors to user-friendly messages
+        let message = signInError.message;
+        if (message.includes('Invalid login credentials')) {
+          message = 'Invalid email or password. Please check your credentials.';
+        } else if (message.includes('Email not confirmed')) {
+          message = 'Please verify your email address before logging in.';
+        }
+        return { success: false, message };
+      }
+
+      // Set the access token for API calls
+      setAuthToken(signInData.session.access_token);
+
+      // Fetch full profile from backend
+      const profileRes = await authAPI.getProfile();
+      if (profileRes.success) {
+        setUser(profileRes.user);
+        return { success: true, user: profileRes.user };
+      }
+
+      return { success: false, message: 'Failed to load user profile.' };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Login failed. Please try again.';
+      return { success: false, message };
     }
   };
 
   // Logout handler
-  const logout = () => {
-    localStorage.removeItem('qn_token');
+  const logout = async () => {
+    await supabase.auth.signOut();
     setAuthToken(null);
     setUser(null);
     setApplications([]);
@@ -142,7 +227,6 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await noticesAPI.createNotice(noticeData);
       if (res.success) {
-        // Refresh notices list
         fetchNotices();
         return { success: true, notice: res.notice };
       }
@@ -200,7 +284,7 @@ export const AuthProvider = ({ children }) => {
       const res = await applicationsAPI.apply(noticeId);
       if (res.success) {
         fetchMyApplications();
-        fetchNotices(); // Update headcount applied on dashboard
+        fetchNotices();
         return { success: true, application: res.application };
       }
       return { success: false, message: 'Failed to apply' };

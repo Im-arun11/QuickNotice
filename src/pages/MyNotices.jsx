@@ -20,14 +20,7 @@ export default function MyNotices() {
   const [activeApplicants, setActiveApplicants] = useState([]);
   const [applicantsLoading, setApplicantsLoading] = useState(false);
 
-  // Redirect if not logged in or not employer
-  useEffect(() => {
-    if (!user) {
-      navigate('/login?redirect=my-notices');
-    } else if (user.role !== 'employer') {
-      navigate('/my-applications');
-    }
-  }, [user, navigate]);
+  // Auth and role checks handled by ProtectedRoute in App.jsx
 
   // Load notices posted by this employer
   const loadMyNotices = async () => {

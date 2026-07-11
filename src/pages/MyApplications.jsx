@@ -14,14 +14,7 @@ export default function MyApplications() {
   const [activeTab, setActiveTab] = useState('all');
   const [loading, setLoading] = useState(true);
 
-  // Redirect if not logged in or not worker
-  useEffect(() => {
-    if (!user) {
-      navigate('/login?redirect=my-applications');
-    } else if (user.role !== 'worker') {
-      navigate('/my-notices');
-    }
-  }, [user, navigate]);
+  // Auth and role checks handled by ProtectedRoute in App.jsx
 
   // Load worker applications on mount
   useEffect(() => {

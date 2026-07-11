@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Briefcase, MapPin, Calendar, Clock, Phone, Plus, Trash2, ArrowRight } from 'lucide-react';
+import { Briefcase, MapPin, Calendar, Clock, Phone, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { MOCK_CATEGORIES, MOCK_LOCATIONS } from '../services/mockData';
+import { CATEGORIES, LOCATIONS } from '../services/constants';
 import Input from '../components/Input';
 import Select from '../components/Select';
 import Button from '../components/Button';
@@ -12,16 +11,6 @@ import PageTransition from '../components/PageTransition';
 export default function PostNotice() {
   const { user, createNotice } = useAuth();
   const navigate = useNavigate();
-
-  // Redirect if not logged in
-  useEffect(() => {
-    if (!user) {
-      navigate('/login?redirect=post-notice');
-    } else if (user.role !== 'employer') {
-      alert('Only employers can post job notices.');
-      navigate('/');
-    }
-  }, [user, navigate]);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -72,38 +61,35 @@ export default function PostNotice() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     setLoading(true);
 
-    // Simulate database delay
-    setTimeout(() => {
-      const noticeData = {
-        title,
-        category,
-        description,
-        salary: Number(salary),
-        salaryType,
-        peopleNeeded: Number(peopleNeeded),
-        location,
-        address,
-        date,
-        workingTime,
-        phoneNumber,
-        requirements: requirements.length > 0 ? requirements : ["Punctuality is required"]
-      };
+    const noticeData = {
+      title,
+      category,
+      description,
+      salary: Number(salary),
+      salaryType,
+      peopleNeeded: Number(peopleNeeded),
+      location,
+      address,
+      date,
+      workingTime,
+      phoneNumber,
+      requirements: requirements.length > 0 ? requirements : ["Punctuality is required"]
+    };
 
-      const res = createNotice(noticeData);
-      setLoading(false);
+    const res = await createNotice(noticeData);
+    setLoading(false);
 
-      if (res.success) {
-        navigate('/my-notices');
-      } else {
-        alert(res.message || 'Failed to create notice');
-      }
-    }, 1000);
+    if (res.success) {
+      navigate('/my-notices');
+    } else {
+      alert(res.message || 'Failed to create notice');
+    }
   };
 
   return (
@@ -139,7 +125,7 @@ export default function PostNotice() {
                 <Select
                   label="Category"
                   id="category"
-                  options={MOCK_CATEGORIES}
+                  options={CATEGORIES}
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   error={errors.category}
@@ -244,7 +230,7 @@ export default function PostNotice() {
                 <Select
                   label="Location Area"
                   id="location"
-                  options={MOCK_LOCATIONS}
+                  options={LOCATIONS}
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   error={errors.location}

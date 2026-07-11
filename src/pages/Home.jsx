@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Search, MapPin, Briefcase, Calendar, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { MOCK_CATEGORIES, MOCK_LOCATIONS } from '../services/mockData';
+import { CATEGORIES, LOCATIONS } from '../services/constants';
 import PageTransition from '../components/PageTransition';
 
 export default function Home() {
@@ -151,7 +151,7 @@ export default function Home() {
                   className="w-full pl-11 pr-10 py-3.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200/80 focus:border-primary rounded-2xl appearance-none focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all text-sm font-semibold text-slate-700"
                 >
                   <option value="">All Categories</option>
-                  {MOCK_CATEGORIES.map((cat, idx) => (
+                  {CATEGORIES.map((cat, idx) => (
                     <option key={idx} value={cat}>{cat}</option>
                   ))}
                 </select>
@@ -172,7 +172,7 @@ export default function Home() {
                   className="w-full pl-11 pr-10 py-3.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200/80 focus:border-primary rounded-2xl appearance-none focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all text-sm font-semibold text-slate-700"
                 >
                   <option value="">All Locations</option>
-                  {MOCK_LOCATIONS.map((loc, idx) => (
+                  {LOCATIONS.map((loc, idx) => (
                     <option key={idx} value={loc}>{loc}</option>
                   ))}
                 </select>

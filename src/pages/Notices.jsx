@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MapPin, Briefcase, Calendar, IndianRupee, SlidersHorizontal, ArrowUpDown, RefreshCw, Grid, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { MOCK_CATEGORIES, MOCK_LOCATIONS } from '../services/mockData';
+import { CATEGORIES, LOCATIONS } from '../services/constants';
 import NoticeCard from '../components/NoticeCard';
 import Button from '../components/Button';
 import Select from '../components/Select';
@@ -136,7 +136,7 @@ export default function Notices() {
               <Select
                 label="Category"
                 id="sidebar-category"
-                options={MOCK_CATEGORIES}
+                options={CATEGORIES}
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 icon={Briefcase}
@@ -146,7 +146,7 @@ export default function Notices() {
               <Select
                 label="Location"
                 id="sidebar-location"
-                options={MOCK_LOCATIONS}
+                options={LOCATIONS}
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 icon={MapPin}
@@ -359,7 +359,7 @@ export default function Notices() {
                     <Select
                       label="Category"
                       id="mobile-category"
-                      options={MOCK_CATEGORIES}
+                      options={CATEGORIES}
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
                       icon={Briefcase}
@@ -369,7 +369,7 @@ export default function Notices() {
                     <Select
                       label="Location"
                       id="mobile-location"
-                      options={MOCK_LOCATIONS}
+                      options={LOCATIONS}
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       icon={MapPin}

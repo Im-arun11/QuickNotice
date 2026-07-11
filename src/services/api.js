@@ -7,7 +7,7 @@ const API = axios.create({
   },
 });
 
-// Helper to attach JWT to headers
+// Helper to attach Supabase access token to headers
 export const setAuthToken = (token) => {
   if (token) {
     API.defaults.headers.common['Authorization'] = `Bearer ${token}`;

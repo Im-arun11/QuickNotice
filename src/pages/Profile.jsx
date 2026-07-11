@@ -1,32 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { User, Phone, MapPin, Building2, Save, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Input from '../components/Input';
 import Select from '../components/Select';
 import Button from '../components/Button';
 import PageTransition from '../components/PageTransition';
-import { MOCK_LOCATIONS } from '../services/mockData';
+import { LOCATIONS } from '../services/constants';
 
 export default function Profile() {
   const { user, updateProfile } = useAuth();
-  const navigate = useNavigate();
-
-  // Redirect if not logged in
-  useEffect(() => {
-    if (!user) {
-      navigate('/login?redirect=profile');
-    }
-  }, [user, navigate]);
 
   // Form states
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
-  const [location, setLocation] = useState(user?.location || '');
+  const [district, setDistrict] = useState(user?.district || '');
   const [companyName, setCompanyName] = useState(user?.companyName || '');
   const [address, setAddress] = useState(user?.address || '');
 
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Sync state if context loads late
@@ -34,7 +26,7 @@ export default function Profile() {
     if (user) {
       setName(user.name);
       setPhone(user.phone || '');
-      setLocation(user.location || '');
+      setDistrict(user.district || '');
       setCompanyName(user.companyName || '');
       setAddress(user.address || '');
     }
@@ -42,32 +34,30 @@ export default function Profile() {
 
   if (!user) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
+    setError('');
     setLoading(true);
 
-    // Simulate database delay
-    setTimeout(() => {
-      const updatedData = {
-        name,
-        phone,
-        location,
-        address,
-        companyName: user.role === 'employer' ? companyName : undefined
-      };
+    const updatedData = {
+      name,
+      phone,
+      district,
+      address,
+      companyName: user.role === 'employer' ? companyName : undefined
+    };
 
-      const res = updateProfile(updatedData);
-      setLoading(false);
+    const res = await updateProfile(updatedData);
+    setLoading(false);
 
-      if (res.success) {
-        setMessage('Profile updated successfully!');
-        // Clear message after 4s
-        setTimeout(() => setMessage(''), 4000);
-      } else {
-        alert(res.message || 'Failed to update profile');
-      }
-    }, 800);
+    if (res.success) {
+      setMessage('Profile updated successfully!');
+      setTimeout(() => setMessage(''), 4000);
+    } else {
+      setError(res.message || 'Failed to update profile');
+      setTimeout(() => setError(''), 4000);
+    }
   };
 
   return (
@@ -85,6 +75,12 @@ export default function Profile() {
           </div>
         )}
 
+        {error && (
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-800 text-sm font-semibold text-left">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
           {/* User Card info summary */}
           <div className="md:col-span-1 bg-slate-50 border border-slate-200/85 rounded-3xl p-6 h-fit text-center space-y-4">
@@ -99,7 +95,7 @@ export default function Profile() {
             </div>
             <div className="text-xs text-slate-400 font-semibold border-t border-slate-200/60 pt-4 text-left space-y-2">
               <p>Email: <span className="text-slate-600 block truncate">{user.email}</span></p>
-              <p>Registered City: <span className="text-slate-600 block">{user.location}</span></p>
+              <p>Registered City: <span className="text-slate-600 block">{user.district}</span></p>
             </div>
           </div>
 
@@ -142,10 +138,10 @@ export default function Profile() {
 
                 <Select
                   label="City Location"
-                  id="location"
-                  options={MOCK_LOCATIONS}
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+                  id="district"
+                  options={LOCATIONS}
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
                   icon={MapPin}
                   placeholder="Select location"
                   required

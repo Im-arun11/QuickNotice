@@ -6,7 +6,7 @@ import Input from '../components/Input';
 import Select from '../components/Select';
 import Button from '../components/Button';
 import PageTransition from '../components/PageTransition';
-import { MOCK_LOCATIONS } from '../services/mockData';
+import { LOCATIONS } from '../services/constants';
 
 export default function Register() {
   const { user, register } = useAuth();
@@ -19,7 +19,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('worker'); // 'worker' or 'employer'
   const [phone, setPhone] = useState('');
-  const [location, setLocation] = useState('');
+  const [district, setDistrict] = useState('');
   const [companyName, setCompanyName] = useState('');
   
   const [error, setError] = useState('');
@@ -35,16 +35,18 @@ export default function Register() {
   const validate = () => {
     if (!name.trim()) return 'Full Name is required';
     if (!email.trim()) return 'Email is required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return 'Please enter a valid email address';
     if (!password) return 'Password is required';
     if (password.length < 6) return 'Password must be at least 6 characters';
     if (password !== confirmPassword) return 'Passwords do not match';
     if (!phone.trim()) return 'Phone number is required';
-    if (!location) return 'Please select a location';
+    if (!district) return 'Please select a location';
     if (role === 'employer' && !companyName.trim()) return 'Company Name is required';
     return null;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -56,28 +58,25 @@ export default function Register() {
 
     setLoading(true);
 
-    // Simulate signup request
-    setTimeout(() => {
-      const userData = {
-        name,
-        email,
-        password,
-        role,
-        phone,
-        location,
-        companyName: role === 'employer' ? companyName : undefined,
-        address: role === 'employer' ? `${companyName}, ${location}` : `${name}, ${location}`
-      };
+    const userData = {
+      name,
+      email,
+      password,
+      role,
+      phone,
+      district,
+      companyName: role === 'employer' ? companyName : undefined,
+      address: role === 'employer' ? `${companyName}, ${district}` : `${name}, ${district}`
+    };
 
-      const res = register(userData);
-      setLoading(false);
+    const res = await register(userData);
+    setLoading(false);
 
-      if (res.success) {
-        navigate(role === 'employer' ? '/my-notices' : '/notices');
-      } else {
-        setError(res.message || 'Registration failed');
-      }
-    }, 1000);
+    if (res.success) {
+      navigate(role === 'employer' ? '/my-notices' : '/notices');
+    } else {
+      setError(res.message || 'Registration failed. Please try again.');
+    }
   };
 
   return (
@@ -178,10 +177,10 @@ export default function Register() {
 
               <Select
                 label="Your City"
-                id="location"
-                options={MOCK_LOCATIONS}
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                id="district"
+                options={LOCATIONS}
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
                 icon={MapPin}
                 placeholder="Select location"
                 required

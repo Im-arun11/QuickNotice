@@ -1,5 +1,4 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import { supabaseAdmin } from '../config/supabase.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -9,25 +8,58 @@ export const protect = async (req, res, next) => {
       // Get token from header
       token = req.headers.authorization.split(' ')[1];
 
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'quicknotice_secret_jwt_key_2026');
+      // Verify token with Supabase Auth
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
-      // Get user from database, omit password field
-      req.user = await User.findById(decoded.id).select('-password');
-      
-      if (!req.user) {
-        return res.status(401).json({ success: false, message: 'Not authorized, user not found' });
+      if (error || !user) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Not authorized, token is invalid or expired' 
+        });
       }
+
+      // Fetch user profile from profiles table
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Not authorized, user profile not found' 
+        });
+      }
+
+      // Attach user info to request object
+      req.user = {
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        role: profile.role,
+        phone: profile.phone,
+        district: profile.district,
+        companyName: profile.company_name,
+        address: profile.address,
+        profileImage: profile.profile_image
+      };
 
       next();
     } catch (error) {
-      console.error(error);
-      return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
+      console.error('Auth middleware error:', error);
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Not authorized, authentication failed' 
+      });
     }
   }
 
   if (!token) {
-    return res.status(401).json({ success: false, message: 'Not authorized, no token provided' });
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Not authorized, no token provided' 
+    });
   }
 };
 
